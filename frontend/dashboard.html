@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Inkline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a href="index.html" class="brand">Inkline<span class="dot">.</span></a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <div id="nav-auth-slot" style="display:flex; align-items:center; gap:24px;"></div>
+    </div>
+  </div>
+</nav>
+
+<header class="wrap dash-head">
+  <div>
+    <div class="eyebrow">Your desk</div>
+    <h1 id="greet">Dashboard</h1>
+    <p id="profile-line" style="color:var(--ink-soft); font-size:.88rem; margin-top:6px;"></p>
+  </div>
+  <a href="create-blog.html" class="btn">+ New post</a>
+</header>
+
+<main class="wrap">
+  <div class="stat-row">
+    <div class="stat"><div class="n" id="stat-total">0</div><div class="l">Posts</div></div>
+    <div class="stat"><div class="n" id="stat-words">0</div><div class="l">Words written</div></div>
+    <div class="stat"><div class="n" id="stat-latest">—</div><div class="l">Last published</div></div>
+  </div>
+
+  <div id="my-posts"></div>
+</main>
+
+<footer>
+  <div class="wrap">Inkline — built module by module.</div>
+</footer>
+
+<script src="js/app.js"></script>
+<script>
+  requireAuth();
+  const user = currentUser();
+
+  async function render(){
+    document.getElementById('greet').textContent = `Welcome back, ${user.name.split(' ')[0]}`;
+
+    try {
+      const profile = await getProfile();
+      document.getElementById('profile-line').textContent =
+        `${profile.email} · member since ${new Date(profile.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}`;
+    } catch (err) {
+      // non-critical — dashboard still works without this line
+    }
+
+    let mine;
+    try {
+      mine = await getMyPosts();
+    } catch (err) {
+      toast(err.message);
+      return;
+    }
+
+    document.getElementById('stat-total').textContent = mine.length;
+    const words = mine.reduce((sum, p) => sum + p.body.trim().split(/\s+/).filter(Boolean).length, 0);
+    document.getElementById('stat-words').textContent = words;
+    document.getElementById('stat-latest').textContent = mine.length ? timeAgo(mine[0].createdAt) : '—';
+
+    const container = document.getElementById('my-posts');
+    if (mine.length === 0){
+      container.innerHTML = `
+        <div class="empty">
+          <h3>You haven't published anything yet</h3>
+          <p>Your first post doesn't need to be your best one.</p>
+          <div style="margin-top:18px;"><a href="create-blog.html" class="btn">Write your first post</a></div>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = mine.map(p => `
+      <div class="dash-post">
+        <div>
+          <h3><a href="post.html?id=${p.id}">${escapeHtml(p.title)}</a></h3>
+          <div class="meta">${escapeHtml(p.tag || 'General')} · ${timeAgo(p.createdAt)}</div>
+        </div>
+        <div class="actions">
+          <button class="icon-btn" data-edit="${p.id}">Edit</button>
+          <button class="icon-btn danger" data-id="${p.id}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.location.href = `edit-blog.html?id=${btn.dataset.edit}`;
+      });
+    });
+
+    container.querySelectorAll('.icon-btn.danger').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this post? This can\'t be undone.')) return;
+        try {
+          await deletePost(btn.dataset.id);
+          toast('Post deleted');
+          render();
+        } catch (err) {
+          toast(err.message);
+        }
+      });
+    });
+  }
+
+  render();
+</script>
+</body>
+</html>

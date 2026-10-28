@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inkline — Post</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a href="index.html" class="brand">Inkline<span class="dot">.</span></a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <div id="nav-auth-slot" style="display:flex; align-items:center; gap:24px;"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+  <article class="post-full" id="post-container">
+    <p>Loading…</p>
+  </article>
+</main>
+
+<footer>
+  <div class="wrap">Inkline — built module by module.</div>
+</footer>
+
+<script src="js/app.js"></script>
+<script>
+  async function loadPost(){
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    const el = document.getElementById('post-container');
+
+    let post;
+    try {
+      post = await getPost(id);
+    } catch (err) {
+      el.innerHTML = `
+        <a class="back-link" href="index.html">&larr; Back to Home</a>
+        <h1>Post not found</h1>
+        <p>${escapeHtml(err.message)}</p>`;
+      return;
+    }
+
+    document.title = post.title + ' — Inkline';
+    el.innerHTML = `
+      <a class="back-link" href="index.html">&larr; Back to Home</a>
+      <span class="tag">${escapeHtml(post.tag || 'General')}</span>
+      <h1>${escapeHtml(post.title)}</h1>
+      <div class="meta">${escapeHtml(post.author.name)} · ${timeAgo(post.createdAt)}</div>
+      <div class="body">${escapeHtml(post.body)}</div>
+    `;
+  }
+
+  loadPost();
+</script>
+</body>
+</html>

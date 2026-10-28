@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit post — Inkline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a href="index.html" class="brand">Inkline<span class="dot">.</span></a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <div id="nav-auth-slot" style="display:flex; align-items:center; gap:24px;"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap" style="max-width:720px; padding-top:44px; padding-bottom:80px;">
+  <div style="font-family:var(--mono); font-size:.78rem; color:var(--moss); text-transform:uppercase; letter-spacing:.1em; margin-bottom:10px;">Editing</div>
+  <h1 style="font-size:2rem; margin-bottom:28px;">Edit post</h1>
+
+  <div class="form-err" id="err"></div>
+
+  <form id="edit-form">
+    <div class="field">
+      <label for="title">Title</label>
+      <input type="text" id="title" required>
+    </div>
+    <div class="field">
+      <label for="tag">Category</label>
+      <input type="text" id="tag">
+    </div>
+    <div class="field">
+      <label for="body">Post</label>
+      <textarea id="body" required></textarea>
+    </div>
+    <div style="display:flex; gap:12px;">
+      <button type="submit" class="btn">Save changes</button>
+      <a href="dashboard.html" class="btn ghost">Cancel</a>
+    </div>
+  </form>
+</main>
+
+<footer>
+  <div class="wrap">Inkline — built module by module.</div>
+</footer>
+
+<script src="js/app.js"></script>
+<script>
+  requireAuth();
+  const params = new URLSearchParams(window.location.search);
+  const postId = params.get('id');
+  const errBox = document.getElementById('err');
+
+  async function loadPost(){
+    if (!postId){
+      errBox.textContent = 'No post specified.';
+      errBox.classList.add('show');
+      return;
+    }
+    try {
+      const post = await getPost(postId);
+      const user = currentUser();
+      if (post.author.email !== user.email){
+        errBox.textContent = 'You can only edit your own posts.';
+        errBox.classList.add('show');
+        document.getElementById('edit-form').style.display = 'none';
+        return;
+      }
+      document.getElementById('title').value = post.title;
+      document.getElementById('tag').value = post.tag || 'General';
+      document.getElementById('body').value = post.body;
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.add('show');
+    }
+  }
+
+  document.getElementById('edit-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const title = document.getElementById('title').value.trim();
+    const tag = document.getElementById('tag').value.trim() || 'General';
+    const body = document.getElementById('body').value.trim();
+    const btn = e.target.querySelector('button[type="submit"]');
+    errBox.classList.remove('show');
+
+    if (!title || !body){
+      errBox.textContent = 'A post needs both a title and some words in it.';
+      errBox.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      await updatePost(postId, { title, tag, body });
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Save changes';
+    }
+  });
+
+  loadPost();
+</script>
+</body>
+</html>

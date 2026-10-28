@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inkline — a small journal for people who write</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a href="index.html" class="brand">Inkline<span class="dot">.</span></a>
+    <div class="nav-links">
+      <a href="index.html" class="active">Home</a>
+      <div id="nav-auth-slot" style="display:flex; align-items:center; gap:24px;"></div>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Issue 001 · Personal essays &amp; notes</div>
+    <h1>Write it down before<br>you talk yourself out of it.</h1>
+    <p>Inkline is a small, no-frills place to publish what you're thinking about — no algorithm, no likes counter, just posts in order.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="section-head">
+    <h2>Latest entries</h2>
+    <span class="count" id="post-count"></span>
+  </div>
+
+  <div class="field" style="max-width:320px; margin-bottom:8px;">
+    <input type="text" id="search-box" placeholder="Search posts...">
+  </div>
+
+  <div class="feed" id="feed"></div>
+</main>
+
+<footer>
+  <div class="wrap">Inkline — built module by module.</div>
+</footer>
+
+<script src="js/app.js"></script>
+<script>
+  async function loadFeed(search = ''){
+    const feed = document.getElementById('feed');
+    const count = document.getElementById('post-count');
+
+    let posts;
+    try {
+      posts = await getPosts(search ? { search } : {});
+    } catch (err) {
+      feed.innerHTML = `<div class="empty"><h3>Couldn't reach the server</h3><p>${escapeHtml(err.message)} — is the Django backend running on localhost:8000?</p></div>`;
+      count.textContent = '';
+      return;
+    }
+
+    count.textContent = posts.length + (posts.length === 1 ? ' post' : ' posts');
+
+    if (posts.length === 0){
+      feed.innerHTML = `
+        <div class="empty">
+          <h3>Nothing here yet</h3>
+          <p>${search ? 'No posts match your search.' : 'Be the first to publish something.'}</p>
+        </div>`;
+      return;
+    }
+
+    feed.innerHTML = posts.map((p, i) => `
+      <article class="post-row">
+        <div class="idx">${String(i + 1).padStart(2, '0')}</div>
+        <div>
+          <h3><a href="post.html?id=${p.id}">${escapeHtml(p.title)}</a></h3>
+          <p class="excerpt">${escapeHtml(excerpt(p.body))}</p>
+          <span class="tag">${escapeHtml(p.tag || 'General')}</span>
+        </div>
+        <div class="meta">${timeAgo(p.createdAt)}<br>${escapeHtml(p.author.name)}</div>
+      </article>
+    `).join('');
+  }
+
+  let debounceTimer;
+  document.getElementById('search-box').addEventListener('input', (e) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => loadFeed(e.target.value.trim()), 300);
+  });
+
+  loadFeed();
+</script>
+</body>
+</html>
